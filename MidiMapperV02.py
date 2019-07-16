@@ -28,14 +28,16 @@ class InputParam:  # accesses and stores the port, channel and map file to be us
                 mappings[orig] = new
         return mappings
 
-    def get_port(self):  # informs user of available ports and returns their choice
+    @staticmethod
+    def get_port():  # informs user of available ports and returns their choice
         port_list = mido.get_input_names()
         print('Available MIDI ports are \n')
         for name in range(0, len(port_list)):
             print('%s' % name, port_list[name])
         return port_list[int(input('\n Choose port by number: '))]
 
-    def get_channel(self):  # returns users choice of MIDI channels to output on
+    @staticmethod
+    def get_channel():  # returns users choice of MIDI channels to output on
         return int(input('Which MIDI Channel do you want to output to?: ')) - 1
 
 
@@ -56,21 +58,21 @@ class MidiReMap:  # class containing methods for processing MIDI according to us
         print('Port in use is %s, channel' % self.inputs.port, (self.inputs.channel + 1))
         return mido.open_ioport(self.inputs.port)
 
-    def port_listen(self): # takes message from input port and sends it to out after processing
+    def port_listen(self):  # takes message from input port and sends it to out after processing
         for msg in self.port:
             if 'channel' in str(msg):
                 print(msg)
                 msg = self.check_cc(msg.copy(channel=self.inputs.channel))
             self.port.send(msg)
 
-    def check_cc(self, msg): # checks MIDI input - sends to transform if cc or output if not.
+    def check_cc(self, msg):  # checks MIDI input - sends to transform if cc or output if not.
         msg = msg.bytes()
         if msg[0] == (176 + self.inputs.channel):
             return mido.Message.from_bytes(self.transform_bit(msg))
         else:
             return mido.Message.from_bytes(msg)
 
-    def transform_bit(self, msg): # transforms cc number and returns msg to be output
+    def transform_bit(self, msg):  # transforms cc number and returns msg to be output
         bit = str(msg[1])
         if bit in dict.keys(self.inputs.map):
             msg[1] = int(self.inputs.map[bit])
@@ -79,7 +81,7 @@ class MidiReMap:  # class containing methods for processing MIDI according to us
             return msg
 
 
-def lets_remap(): # creates an input object and runs the direct_midi looper
+def lets_remap():  # creates an input object and runs the direct_midi looper
     remap = MidiReMap()
     remap.direct_midi()
 
