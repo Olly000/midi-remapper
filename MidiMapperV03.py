@@ -7,7 +7,6 @@ import pygame.midi as pym
 import tkinter as tk
 import threading
 from csv import reader
-from sys import exit
 
 
 mido.set_backend('mido.backends.pygame')
@@ -31,7 +30,6 @@ class Interface(tk.Frame):  # Creates a GUI frame for user interaction
         labels = ['MIDI in', 'MIDI out', 'channel', 'map']
         data = [self.in_port.get('active'), self.out_port.get('active'),
                 self.channel.get(), self.map_file.get()]
-        print(data)
         return dict(zip(labels, data))
 
     def end_app(self):
@@ -44,16 +42,16 @@ class Interface(tk.Frame):  # Creates a GUI frame for user interaction
         global run_state
         run_state = False
         self.option_set.config(state='normal')
-        print(run_state)
+        self.pause.config(state='disabled')
 
     def start_processor(self):
         global run_state
         run_state = True
         process = MidiReMap(self.grab_inputs())
         self.option_set.config(state='disabled')
+        self.pause.config(state='normal')
         new_process_thread = threading.Thread(target=process.direct_midi)
         new_process_thread.start()
-        print('new thread')
 
     @staticmethod
     def select_port(port_list, direction):
@@ -83,10 +81,10 @@ class Interface(tk.Frame):  # Creates a GUI frame for user interaction
 
     def create_buttons(self):
         self.option_set = tk.Button(root, text='Start', command=self.start_processor)
-        pause = tk.Button(root, text='Pause', command=self.pause_loop)
+        self.pause = tk.Button(root, text='Pause', command=self.pause_loop, state='disabled')
         quit_button = tk.Button(root, text="Quit", bg="red", command=self.end_app)
         self.option_set.grid(column=0, padx=30, pady=30)
-        pause.grid(column=1, padx=30, pady=10)
+        self.pause.grid(column=1, padx=30, pady=10)
         quit_button.grid(column=1, padx=30, pady=30)
 
 
@@ -115,30 +113,12 @@ class MidiReMap:  # class containing methods for processing MIDI according to us
             msg = self.check_cc(msg.copy(channel=self.channel))
         self.out_port.send(msg)
 
-    def direct_midi(self):  # listens for MIDI input or key interruption
-        global run_state
-        if run_state:
-            print('while loop started')
-            for msg in self.in_port:
-                print('msg loop started')
-                if run_state:
-                    self.handle_cc(msg)
-                else:
-                    print('msg loop exited')
-                    break
-        else:
-            print('loop exited end d_m')
-            return
-
-    def port_listen(self):  # takes message from input port and sends it to out after processing
+    def direct_midi(self):
         global run_state
         while run_state:
-            for msg in self.in_port:
-                if run_state:
-                    self.handle_cc(msg)
-                else:
-                    print('loop exited')
-                    break
+            msg = self.in_port.receive(block=False)
+            if msg:
+                self.handle_cc(msg)
 
     def check_cc(self, msg):  # checks MIDI input - sends to transform if cc or output if not.
         msg = msg.bytes()
