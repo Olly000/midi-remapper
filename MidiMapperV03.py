@@ -13,7 +13,7 @@ mido.set_backend('mido.backends.pygame')
 
 pym.init()
 
-run_state = False
+run_state = False  # global variable that allows processing thread to be ended through interface button click
 
 
 class Interface(tk.Frame):  # Creates a GUI frame for user interaction
@@ -24,7 +24,7 @@ class Interface(tk.Frame):  # Creates a GUI frame for user interaction
         self.out_port = self.select_port(mido.get_output_names(), 'output')
         self.map_file = self.select_map_file()
         self.channel = self.create_channel_field()
-        self.create_buttons()
+        self.buttons = self.create_buttons()
 
     def grab_inputs(self):
         labels = ['MIDI in', 'MIDI out', 'channel', 'map']
@@ -41,15 +41,15 @@ class Interface(tk.Frame):  # Creates a GUI frame for user interaction
     def pause_loop(self):
         global run_state
         run_state = False
-        self.option_set.config(state='normal')
-        self.pause.config(state='disabled')
+        self.buttons['option'].config(state='normal')
+        self.buttons['pause'].config(state='disabled')
 
     def start_processor(self):
         global run_state
         run_state = True
         process = MidiReMap(self.grab_inputs())
-        self.option_set.config(state='disabled')
-        self.pause.config(state='normal')
+        self.buttons['option'].config(state='disabled')
+        self.buttons['pause'].config(state='normal')
         new_process_thread = threading.Thread(target=process.direct_midi)
         new_process_thread.start()
 
@@ -80,12 +80,13 @@ class Interface(tk.Frame):  # Creates a GUI frame for user interaction
         return channel
 
     def create_buttons(self):
-        self.option_set = tk.Button(root, text='Start', command=self.start_processor)
-        self.pause = tk.Button(root, text='Pause', command=self.pause_loop, state='disabled')
+        option_set = tk.Button(root, text='Start', command=self.start_processor)
+        pause = tk.Button(root, text='Pause', command=self.pause_loop, state='disabled')
         quit_button = tk.Button(root, text="Quit", bg="red", command=self.end_app)
-        self.option_set.grid(column=0, padx=30, pady=30)
-        self.pause.grid(column=1, padx=30, pady=10)
+        option_set.grid(column=0, padx=30, pady=30)
+        pause.grid(column=1, padx=30, pady=10)
         quit_button.grid(column=1, padx=30, pady=30)
+        return {'option': option_set, 'pause': pause, 'quit': quit_button}
 
 
 class MidiReMap:  # class containing methods for processing MIDI according to user input
